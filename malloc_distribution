@@ -1,0 +1,55 @@
+#!/bin/sh
+
+opt_pid=0
+opt_command=0
+
+while getopts p:c:h name
+do
+  case $name in
+    p) 
+      opt_pid=1; pid=$OPTARG;;
+    h|?)	
+      cat <<-END >&2
+	USAGE: malloc_distribution { -p PID | command }
+	e.g.: 
+	  malloc_distribution -p 12345
+	  malloc_distribution ls
+	END
+    exit 1
+  esac
+done
+
+shift "$(( OPTIND - 1 ))"
+
+if [ $opt_pid -eq 0 ]; then
+	opt_command=1
+	if [ "$*" = "" ]; then
+		$0 -h
+		exit
+	fi
+	command="$*"
+fi
+
+#################################
+# --- Main Program, DTrace ---
+#
+
+### Define D Script
+dtrace='
+  #pragma D option quiet
+ 
+  inline int OPT_pid       = '$opt_pid';
+  inline int OPT_command   = '$opt_command';
+ 
+  pid$target::malloc:entry {@ = quantize(arg0)} 
+ 
+  tick-10s {exit(0)}
+'
+
+### Run DTrace
+if [ $opt_command -eq 1 ]; then
+	dtrace -x evaltime=exec -n "$dtrace" -c "$command" >&2
+else
+	dtrace -n "$dtrace" -p "$pid" >&2
+fi
+
