@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/bin/sh -x
+set -ue
 
 opt_pid=0
 pid=0
@@ -8,20 +9,18 @@ command=""
 while getopts p:h name
 do
   case $name in
-    p) 
-      opt_pid=1; pid=$OPTARG;;
-    h|?)	
-      cat <<-END >&2
-	USAGE: malloc_distribution { -p PID | command }
+    p) opt_pid=1; pid=$OPTARG ;;
+    h|?) cat <<-END >&2
+	USAGE: alloc_lifetime { -p PID | command }
 	e.g.: 
-	  malloc_distribution -p 12345
-	  malloc_distribution ls
+	  alloc_lifetime -p 12345
+	  alloc_lifetime ls
 	END
     exit 1
   esac
 done
 
-shift "$(( OPTIND - 1 ))"
+shift $(( OPTIND - 1 ))
 
 if [ $opt_pid -eq 0 ]; then
 	opt_command=1
@@ -40,15 +39,17 @@ fi
 dtrace='
   #pragma D option quiet
  
-  inline int OPT_command   = '$opt_command';
-  inline int OPT_pid       = '$opt_pid';
-  inline int PID           = '$pid';
+  pid$target::malloc:return {
+    self->lifetime[arg1] = timestamp
+  } 
  
-  pid$target::malloc:entry {@ = quantize(arg0)} 
- 
+  pid$target::free:entry {
+    @ = quantize((timestamp - self->lifetime[arg0]) / 1000000)
+  } 
+
   tick-10s {
-	  exit(0)
-	}
+    exit(0)
+  }
 '
 
 ### Run DTrace
