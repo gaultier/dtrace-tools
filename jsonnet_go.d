@@ -1,6 +1,7 @@
 #!/usr/sbin/dtrace -s
 
 // Log and time evaluation of Jsonnet scripts.
+// Also log the result of the evaluation.
 // Tweak the function name if needed.
 
 pid$target::github.com?ory?x?jsonnetsecure.(?processPoolVM).EvaluateAnonymousSnippet:entry /progenyof($target)/ {
