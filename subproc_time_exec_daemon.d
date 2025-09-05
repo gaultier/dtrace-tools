@@ -4,8 +4,10 @@
 // Useful to see a Gantt-like chart of all subcommands executed by the root process.
 //
 // Note: Some processes e.g. `npm run test` submit all their work to a daemon process which runs indefinitely, 
-// in which case this script will show essentially nothing.
-// In this case use `subproc_time_exec_daemon.d`.
+// in which case running dtrace with `-p` or `-c` would stop dtrace automatically when the target process terminates.
+// Thus, this script must run forever as well and filter processes by some criteria e.g. `execname == "nodejs"`,
+// and be terminated manually e.g. with Ctrl-C.
+
 
 #pragma D option quiet
 
@@ -14,12 +16,13 @@ uint64_t start[pid_t];
 string process_name[pid_t];
 int trailing_semicolon;
 
-BEGIN {
-  printf("[\n");
+proc:::start / basename(execname) == "node" && parent == 0 / {
+    parent = pid;
+    printf("[\n");
 }
 
 proc:::start
-/ pid == $target || progenyof($target) /
+/ parent != 0 && progenyof(parent) /
 {
     this->now = timestamp;
     this->argc = curpsinfo->pr_argc;
@@ -36,7 +39,7 @@ proc:::start
     this->s = strjoin(this->s, ", \"tid\":");
     this->s = strjoin(this->s, lltostr(tid));
     this->s = strjoin(this->s, ", \"ts\":");
-    this->s = strjoin(this->s, lltostr(this->now/1000));
+    this->s = strjoin(this->s, lltostr(this->now / 1000));
     this->s = strjoin(this->s, ", \"name\":\"");
     this->s = strjoin(this->s, basename(execname));
     this->s = strjoin(this->s, "\"");
@@ -66,7 +69,7 @@ proc:::start
 }
 
 proc:::exit
-/ pid == $target || progenyof($target)/
+/parent != 0 && progenyof(parent)/
 {
     this->now = timestamp;
     this->elapsed = this->now - start[pid];
@@ -78,7 +81,7 @@ proc:::exit
             tid,
             this->now/1000,
         process_name[pid] == "" ? "" : process_name[pid],
-        this->elapsed/1000);
+        this->elapsed / 1000000);
 
     process_name[pid] = 0;
 }
