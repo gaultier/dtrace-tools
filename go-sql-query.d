@@ -33,15 +33,15 @@ typedef struct {
 
 pid$target::database?sql.*.QueryContext:entry {
   this->query = stringof(copyin(arg3, arg4)); // Query string.
-  this->args_ptr = arg5;
-  this->args_count = arg6;
   printf("%p %d\n", arg5, arg6);
+
+  this->args_ptr = arg5;
 
   printf("%s\n", this->query);
   this->iface0 = (GoInterface*) copyin(this->args_ptr, sizeof(GoInterface));
-  print(*(this->iface0));
   this->rtti0 = (GoType*) copyin((user_addr_t)this->iface0->rtti, sizeof(GoType));
   print(*(this->rtti0));
+  printf("\n");
 
   this->go_arr0 = (GoArrayType*)copyin((user_addr_t)this->iface0->rtti, sizeof(GoArrayType));
   print(*(this->go_arr0));
@@ -54,17 +54,16 @@ pid$target::database?sql.*.QueryContext:entry {
   tracemem(this->go_str0, 16);
 
   this->iface1 = (GoInterface*) copyin(this->args_ptr + 1*sizeof(GoInterface), sizeof(GoInterface));
-  print(*(this->iface1));
   this->rtti1 = (GoType*) copyin((user_addr_t)this->iface1->rtti, sizeof(GoType));
   print(*(this->rtti1));
+  printf("\n");
 
   this->iface2 = (GoInterface*) copyin(this->args_ptr + 2*sizeof(GoInterface), sizeof(GoInterface));
-  print(*(this->iface2));
   this->rtti2 = (GoType*) copyin((user_addr_t)this->iface2->rtti, sizeof(GoType));
   print(*(this->rtti2));
+  printf("\n");
 
   this->iface3 = (GoInterface*) copyin(this->args_ptr + 3*sizeof(GoInterface), sizeof(GoInterface));
-  print(*(this->iface3));
   this->rtti3 = (GoType*) copyin((user_addr_t)this->iface3->rtti, sizeof(GoType));
   print(*(this->rtti3));
   printf("\n");
