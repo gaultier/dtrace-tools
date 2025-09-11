@@ -1,3 +1,6 @@
+#!/usr/sbin/dtrace -s
+
+#pragma D option strsize=16K
 
 typedef struct {
   uint8_t* ptr;
