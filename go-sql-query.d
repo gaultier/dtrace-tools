@@ -36,11 +36,12 @@ typedef struct {
 
 pid$target::database?sql.*.QueryContext:entry {
   this->query = stringof(copyin(arg3, arg4)); // Query string.
+  printf("%s\n", this->query);
+
   printf("%p %d\n", arg5, arg6);
 
   this->args_ptr = arg5;
 
-  printf("%s\n", this->query);
   this->iface0 = (GoInterface*) copyin(this->args_ptr, sizeof(GoInterface));
   this->rtti0 = (GoType*) copyin((user_addr_t)this->iface0->rtti, sizeof(GoType));
   print(*(this->rtti0));
