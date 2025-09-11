@@ -45,10 +45,15 @@ pid$target::database?sql.*.QueryContext:entry {
 
   this->go_arr0 = (GoArrayType*)copyin((user_addr_t)this->iface0->rtti, sizeof(GoArrayType));
   print(*(this->go_arr0));
+  printf("\n");
+
   this->go_arr0_elem = (GoType*)copyin((user_addr_t)this->go_arr0->elem, sizeof(GoType));
   print(*(this->go_arr0_elem));
+  printf("\n");
+
   this->go_arr0_slice = (GoType*)copyin((user_addr_t)this->go_arr0->slice, sizeof(GoType));
   print(*(this->go_arr0_slice));
+  printf("\n");
 
   this->go_str0 = (uint8_t*)copyin((user_addr_t)this->iface0->ptr, 16);
   tracemem(this->go_str0, 16);
