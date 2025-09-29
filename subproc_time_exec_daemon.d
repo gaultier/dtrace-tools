@@ -16,7 +16,7 @@ uint64_t start[pid_t];
 string process_name[pid_t];
 int trailing_semicolon;
 
-proc:::start / basename(execname) == "node" && parent == 0 / {
+proc:::start / basename(execname) == "make" && parent == 0 / {
     parent = pid;
     printf("[\n");
 }
@@ -84,6 +84,7 @@ proc:::exit
         this->elapsed / 1000000);
 
     process_name[pid] = 0;
+    start[pid]=0;
 }
 
 END {
