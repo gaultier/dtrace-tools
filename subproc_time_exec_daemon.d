@@ -5,46 +5,49 @@
 //
 // Note: Some processes e.g. `npm run test` submit all their work to a daemon process which runs indefinitely, 
 // in which case running dtrace with `-p` or `-c` would stop dtrace automatically when the target process terminates.
-// Thus, this script must run forever as well and filter processes by some criteria e.g. `execname == "nodejs"`,
+// Thus, this script must run forever as well and filter processes by some criteria e.g. `execname == "node"`,
 // and be terminated manually e.g. with Ctrl-C.
 
 
 #pragma D option quiet
 
 pid_t parent;
-int trailing_semicolon;
+uint64_t pid_to_id[pid_t];
+uint64_t myid;
 
 proc:::start / basename(execname) == "make" && parent == 0 / {
     parent = pid;
-    printf("[\n");
+    printf("kind|id|ppid|pid|tid|ts|basename|execname|argc|argv\n");
 }
 
 proc:::start
 / parent != 0 && progenyof(parent) /
 {
+    myid = myid + 1;
+    pid_to_id[pid] = myid;
+
     this->now = timestamp;
     this->argc = curpsinfo->pr_argc;
-    if (trailing_semicolon == 1) {
-      this->s = ",";
-    } else {
-      this->s = "";
-      trailing_semicolon = 1;
-    }
-    this->s = strjoin(this->s, "{\"ph\": \"B\", \"ppid\":");
+    this->s = "B|";
+    this->s = strjoin(this->s, lltostr(myid));
+    this->s = strjoin(this->s, "|");
     this->s = strjoin(this->s, lltostr(ppid));
-    this->s = strjoin(this->s, ", \"pid\":");
+    this->s = strjoin(this->s, "|");
     this->s = strjoin(this->s, lltostr(pid));
-    this->s = strjoin(this->s, ", \"tid\":");
+    this->s = strjoin(this->s, "|");
     this->s = strjoin(this->s, lltostr(tid));
-    this->s = strjoin(this->s, ", \"ts\":");
-    this->s = strjoin(this->s, lltostr(this->now / 1000)); // us.
-    this->s = strjoin(this->s, ", \"name\":\"");
+    this->s = strjoin(this->s, "|");
+    this->s = strjoin(this->s, lltostr(this->now));
+    this->s = strjoin(this->s, "|");
     this->s = strjoin(this->s, basename(execname));
-    this->s = strjoin(this->s, "\"");
+    this->s = strjoin(this->s, "|");
+    this->s = strjoin(this->s, execname);
+    this->s = strjoin(this->s, "|");
+    this->s = strjoin(this->s, lltostr(this->argc));
+    this->s = strjoin(this->s, "|");
 
     if (this->argc && curpsinfo->pr_argv) {
       this->argv = curpsinfo->pr_argv ? (char**)copyin(curpsinfo->pr_argv, this->argc * sizeof(char*)) : 0;
-      this->s = strjoin(this->s, ",\"args\":\"");
       this->s = (this->argv && this->argc > 0) ? strjoin(this->s, basename(copyinstr((user_addr_t)this->argv[0]))) : this->s;
       this->s = (this->argv && this->argc > 1) ? strjoin(this->s, strjoin(" ", copyinstr((user_addr_t)this->argv[1]))) : this->s;
       this->s = (this->argv && this->argc > 2) ? strjoin(this->s, strjoin(" ", copyinstr((user_addr_t)this->argv[2]))) : this->s;
@@ -77,24 +80,23 @@ proc:::start
       this->s = (this->argv && this->argc > 29) ? strjoin(this->s, strjoin(" ", copyinstr((user_addr_t)this->argv[29]))) : this->s;
       this->s = (this->argv && this->argc > 30) ? strjoin(this->s, strjoin(" ", copyinstr((user_addr_t)this->argv[30]))) : this->s;
       this->s = (this->argv && this->argc > 31) ? strjoin(this->s, strjoin(" ", copyinstr((user_addr_t)this->argv[31]))) : this->s;
-      this->s = strjoin(this->s, "\"");
     }
-    this->s = strjoin(this->s, "}\n");
-    printf("%s", this->s);
+    printf("%s\n", this->s);
 }
 
 proc:::exit
 /parent != 0 && progenyof(parent)/
 {
-    printf(",{\"ph\":\"E\", \"ppid\":%d, \"pid\":%d, \"tid\": %d, \"ts\":%d}\n",
+    this->id = pid_to_id[pid];
+    printf("E|%d|%d|%d|%d|%d||||\n",
+            this->id,
             ppid,
             pid,
             tid,
             timestamp); 
-
+    pid_to_id[pid] = 0;
 
     if (pid == parent) {
-      printf("]\n");
       exit(0);
     }
 }
