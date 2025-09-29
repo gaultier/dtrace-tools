@@ -1,6 +1,6 @@
 #!/usr/sbin/dtrace -s
 
-// Log all OS child processes invocations as JSON in the Chrome Trace Format.
+// Log all OS child processes invocations as CSV with `|` as separator.
 // Useful to see a Gantt-like chart of all subcommands executed by the root process.
 //
 // Note: Some processes e.g. `npm run test` submit all their work to a daemon process which runs indefinitely, 
