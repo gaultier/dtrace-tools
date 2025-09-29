@@ -12,10 +12,6 @@
 #pragma D option quiet
 
 pid_t parent;
-uint64_t start[pid_t];
-uint64_t pid_to_id[pid_t];
-uint64_t myid;
-string process_name[pid_t];
 int trailing_semicolon;
 
 proc:::start / basename(execname) == "make" && parent == 0 / {
@@ -26,9 +22,6 @@ proc:::start / basename(execname) == "make" && parent == 0 / {
 proc:::start
 / parent != 0 && progenyof(parent) /
 {
-    myid = myid + 1;
-
-    pid_to_id[pid] = myid;
     this->now = timestamp;
     this->argc = curpsinfo->pr_argc;
     if (trailing_semicolon == 1) {
@@ -39,8 +32,6 @@ proc:::start
     }
     this->s = strjoin(this->s, "{\"ph\": \"B\", \"ppid\":");
     this->s = strjoin(this->s, lltostr(ppid));
-    this->s = strjoin(this->s, ", \"id\":");
-    this->s = strjoin(this->s, lltostr(myid));
     this->s = strjoin(this->s, ", \"pid\":");
     this->s = strjoin(this->s, lltostr(pid));
     this->s = strjoin(this->s, ", \"tid\":");
@@ -50,9 +41,6 @@ proc:::start
     this->s = strjoin(this->s, ", \"name\":\"");
     this->s = strjoin(this->s, basename(execname));
     this->s = strjoin(this->s, "\"");
-
-    start[pid] = this->now;
-    process_name[pid] = basename(execname);
 
     if (this->argc && curpsinfo->pr_argv) {
       this->argv = curpsinfo->pr_argv ? (char**)copyin(curpsinfo->pr_argv, this->argc * sizeof(char*)) : 0;
@@ -70,33 +58,20 @@ proc:::start
     }
     this->s = strjoin(this->s, "}\n");
     printf("%s", this->s);
-
-
-    this->s = 0;
 }
 
 proc:::exit
 /parent != 0 && progenyof(parent)/
 {
-    this->now = timestamp;
-    this->elapsed = this->now - start[pid];
-    this->myid = pid_to_id[pid];
-
-    // Print the process name and the elapsed time in milliseconds.
-    printf(",{\"ph\":\"E\", \"ppid\":%d, \"id\": %d, \"pid\":%d, \"tid\": %d, \"ts\":%d, \"name\":\"%s\", \"elapsed\":%d}\n",
+    printf(",{\"ph\":\"E\", \"ppid\":%d, \"pid\":%d, \"tid\": %d, \"ts\":%d}\n",
             ppid,
-            this->myid,
             pid,
             tid,
-            this->now/1000, // us.
-        process_name[pid] == "" ? "" : process_name[pid],
-        this->elapsed / 1000000); // ms.
+            timestamp); 
 
-    process_name[pid] = 0;
-    start[pid]=0;
-    pid_to_id[pid] = 0;
-}
 
-END {
-  printf("]\n");
+    if (pid == parent) {
+      printf("]\n");
+      exit(0);
+    }
 }
