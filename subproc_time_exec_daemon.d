@@ -39,7 +39,7 @@ proc:::start
     this->s = strjoin(this->s, ", \"tid\":");
     this->s = strjoin(this->s, lltostr(tid));
     this->s = strjoin(this->s, ", \"ts\":");
-    this->s = strjoin(this->s, lltostr(this->now / 1000));
+    this->s = strjoin(this->s, lltostr(this->now / 1000)); // us.
     this->s = strjoin(this->s, ", \"name\":\"");
     this->s = strjoin(this->s, basename(execname));
     this->s = strjoin(this->s, "\"");
@@ -79,9 +79,9 @@ proc:::exit
             ppid,
             pid,
             tid,
-            this->now/1000,
+            this->now/1000, // us.
         process_name[pid] == "" ? "" : process_name[pid],
-        this->elapsed / 1000000);
+        this->elapsed / 1000000); // ms.
 
     process_name[pid] = 0;
     start[pid]=0;
