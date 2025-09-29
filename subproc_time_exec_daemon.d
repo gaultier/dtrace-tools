@@ -13,6 +13,8 @@
 
 pid_t parent;
 uint64_t start[pid_t];
+uint64_t pid_to_id[pid_t];
+uint64_t myid;
 string process_name[pid_t];
 int trailing_semicolon;
 
@@ -24,6 +26,9 @@ proc:::start / basename(execname) == "make" && parent == 0 / {
 proc:::start
 / parent != 0 && progenyof(parent) /
 {
+    myid = myid + 1;
+
+    pid_to_id[pid] = myid;
     this->now = timestamp;
     this->argc = curpsinfo->pr_argc;
     if (trailing_semicolon == 1) {
@@ -34,6 +39,8 @@ proc:::start
     }
     this->s = strjoin(this->s, "{\"ph\": \"B\", \"ppid\":");
     this->s = strjoin(this->s, lltostr(ppid));
+    this->s = strjoin(this->s, ", \"id\":");
+    this->s = strjoin(this->s, lltostr(myid));
     this->s = strjoin(this->s, ", \"pid\":");
     this->s = strjoin(this->s, lltostr(pid));
     this->s = strjoin(this->s, ", \"tid\":");
@@ -73,10 +80,12 @@ proc:::exit
 {
     this->now = timestamp;
     this->elapsed = this->now - start[pid];
+    this->myid = pid_to_id[pid];
 
     // Print the process name and the elapsed time in milliseconds.
-    printf(",{\"ph\":\"E\", \"ppid\":%d, \"pid\":%d, \"tid\": %d, \"ts\":%d, \"name\":\"%s\", \"elapsed\":%d}\n",
+    printf(",{\"ph\":\"E\", \"ppid\":%d, \"id\": %d, \"pid\":%d, \"tid\": %d, \"ts\":%d, \"name\":\"%s\", \"elapsed\":%d}\n",
             ppid,
+            this->myid,
             pid,
             tid,
             this->now/1000, // us.
@@ -85,6 +94,7 @@ proc:::exit
 
     process_name[pid] = 0;
     start[pid]=0;
+    pid_to_id[pid] = 0;
 }
 
 END {
