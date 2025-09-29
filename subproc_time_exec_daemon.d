@@ -17,7 +17,7 @@ uint64_t myid;
 
 proc:::start / basename(execname) == "make" && parent == 0 / {
     parent = pid;
-    printf("kind|id|ppid|pid|tid|ts|basename|execname|argc|argv\n");
+    printf("kind|id|parent_id|ppid|pid|tid|ts|basename|execname|argc|argv\n");
 }
 
 proc:::start
@@ -26,10 +26,13 @@ proc:::start
     myid = myid + 1;
     pid_to_id[pid] = myid;
 
+    this->parent_id = pid_to_id[ppid];
     this->now = timestamp;
     this->argc = curpsinfo->pr_argc;
     this->s = "B|";
     this->s = strjoin(this->s, lltostr(myid));
+    this->s = strjoin(this->s, "|");
+    this->s = strjoin(this->s, lltostr(this->parent_id));
     this->s = strjoin(this->s, "|");
     this->s = strjoin(this->s, lltostr(ppid));
     this->s = strjoin(this->s, "|");
@@ -88,8 +91,10 @@ proc:::exit
 /parent != 0 && progenyof(parent)/
 {
     this->id = pid_to_id[pid];
-    printf("E|%d|%d|%d|%d|%d||||\n",
+    this->parent_id = pid_to_id[ppid];
+    printf("E|%d|%d|%d|%d|%d|%d||||\n",
             this->id,
+            this->parent_id,
             ppid,
             pid,
             tid,
