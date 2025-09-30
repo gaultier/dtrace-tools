@@ -32,14 +32,14 @@ func main() {
 	r := csv.NewReader(file)
 	r.FieldsPerRecord = 11
 	r.LazyQuotes = true
-	r.Comma = '|'
+	r.Comma = '\uFFFC'
 	r.ReuseRecord = false
 
 	idToEvent := make(map[int]Event)
 
 	fmt.Println("digraph {  concentrate=true\n")
 
-	for {
+	for i := 0; ; i++ {
 		row, err := r.Read()
 		if err == io.EOF {
 			break
@@ -48,7 +48,11 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		if len(row) != 11 || row[0] == "kind" {
+		if i == 0 { // Skip header.
+			continue
+		}
+		if len(row) != 11 {
+			fmt.Fprintf(os.Stderr, "skipping record with unexpected number of fields %d: %+v\n", len(row), row)
 			continue
 		}
 
@@ -107,7 +111,7 @@ func main() {
 				fmt.Errorf("no parent info: id=%d pid=%d ppid=%d", event.Id, event.Pid, event.Ppid)
 			} else {
 				if parent.Basename != beginEvent.Basename {
-					fmt.Printf("%s -> %s [tooltip=\"%d ms\"];\n", strconv.Quote(parent.Basename), strconv.Quote(beginEvent.Basename), elapsed/1000_000)
+					fmt.Printf("%s -> %s [tooltip=\"%d ms\", label=%s];\n", strconv.Quote(parent.Basename), strconv.Quote(beginEvent.Basename), elapsed/1000_000, strconv.Quote(beginEvent.Argv))
 				}
 			}
 		}

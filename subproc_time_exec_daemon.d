@@ -1,6 +1,6 @@
 #!/usr/sbin/dtrace -s
 
-// Log all OS child processes invocations as CSV with `|` as separator.
+// Log all OS child processes invocations as CSV with the character `￼` (U+FFFC) as separator.
 // Useful to see a Gantt-like chart of all subcommands executed by the root process.
 //
 // Note: Some processes e.g. `npm run test` submit all their work to a daemon process which runs indefinitely, 
@@ -15,9 +15,9 @@ pid_t parent;
 uint64_t pid_to_id[pid_t];
 uint64_t myid;
 
-proc:::start / basename(execname) == "make" && parent == 0 / {
+proc:::start / basename(execname) == "fish" && parent == 0 / {
     parent = pid;
-    printf("kind|id|parent_id|ppid|pid|tid|ts|basename|execname|argc|argv\n");
+    printf("kind￼id￼parent_id￼ppid￼pid￼tid￼ts￼basename￼execname￼argc￼argv\n");
 }
 
 proc:::start
@@ -29,25 +29,25 @@ proc:::start
     this->parent_id = pid_to_id[ppid];
     this->now = timestamp;
     this->argc = curpsinfo->pr_argc;
-    this->s = "B|";
+    this->s = "B￼";
     this->s = strjoin(this->s, lltostr(myid));
-    this->s = strjoin(this->s, "|");
+    this->s = strjoin(this->s, "￼");
     this->s = strjoin(this->s, lltostr(this->parent_id));
-    this->s = strjoin(this->s, "|");
+    this->s = strjoin(this->s, "￼");
     this->s = strjoin(this->s, lltostr(ppid));
-    this->s = strjoin(this->s, "|");
+    this->s = strjoin(this->s, "￼");
     this->s = strjoin(this->s, lltostr(pid));
-    this->s = strjoin(this->s, "|");
+    this->s = strjoin(this->s, "￼");
     this->s = strjoin(this->s, lltostr(tid));
-    this->s = strjoin(this->s, "|");
+    this->s = strjoin(this->s, "￼");
     this->s = strjoin(this->s, lltostr(this->now));
-    this->s = strjoin(this->s, "|");
+    this->s = strjoin(this->s, "￼");
     this->s = strjoin(this->s, basename(execname));
-    this->s = strjoin(this->s, "|");
+    this->s = strjoin(this->s, "￼");
     this->s = strjoin(this->s, execname);
-    this->s = strjoin(this->s, "|");
+    this->s = strjoin(this->s, "￼");
     this->s = strjoin(this->s, lltostr(this->argc));
-    this->s = strjoin(this->s, "|");
+    this->s = strjoin(this->s, "￼");
 
     if (this->argc && curpsinfo->pr_argv) {
       this->argv = curpsinfo->pr_argv ? (char**)copyin(curpsinfo->pr_argv, this->argc * sizeof(char*)) : 0;
@@ -92,7 +92,7 @@ proc:::exit
 {
     this->id = pid_to_id[pid];
     this->parent_id = pid_to_id[ppid];
-    printf("E|%d|%d|%d|%d|%d|%d||||\n",
+    printf("E￼%d￼%d￼%d￼%d￼%d￼%d￼￼￼￼\n",
             this->id,
             this->parent_id,
             ppid,
